@@ -1,0 +1,147 @@
+<div class="row">
+  <div class="col-lg-4 col-md-6 mb-2">
+    <div class="list-group">
+      <% users.forEach((a,b)=> { %>
+        <a href="/chat/<%= a._id %>" data-_id="<%= a._id%>"
+          class="chatname list-group-item list-group-item-action <%= ownuser.notseen.includes(a._id) ? 'font-weight-bold' : null %> <%= String(a._id) == String(user._id) ? 'active' : null %>"
+          aria-current="true">
+          <%= a.email %>
+        </a>
+        <% }) %>
+    </div>
+  </div>
+  <div class="col-lg-8 col-md-6">
+    <p style="display: none" id="own">
+      <%= ownuser._id %>
+    </p>
+    <p style="display: none" class="currentemail">
+      <%= user._id %>
+    </p>
+    <p class="curremail">
+      <%= user.email %>
+    </p>
+    <div class="chatbox">
+      <div class="chatboxinps">
+        <% if(messages){ %>
+          <% messages.forEach(a=> { %>
+            <div>
+              <p class="<%= a.sender == ownuser._id ? 'right' : 'left' %>">
+                <%= a.text %>
+              </p>
+            </div>
+            <% }) %>
+            <% } %>
+            <div id="typing" style="display: none">
+              <%= user.name %> is typing
+            </div>
+          </div>
+          
+          <div class="input-group mb-3 position-relative mb-0">
+        <img id="seen" style="display: <%= user.notseen.includes(ownuser._id) ? 'none' : 'inline-block' %>" src="<%= '/images/upload/' + user.image %>" class="seenimg">
+
+      </div>
+      <form class="input-group mb-3 emojiparent" id="socketform">
+        <input type="text" class="form-control" id="emojiinput" name="email" placeholder="Message...">
+        <button type="button" id="emojibtn">😃</button>
+
+        <input style="display: none;" type="button" id="trigger" value="Check" /><br>
+
+        <div class="emojis">
+        </div>
+        <button class="btn btn-primary" id="button-addon2">Send</button>
+      </form>
+    </div>
+  </div>
+  <audio id="myAudio">
+    <source src="/sounds/message_voice.mp3" type="audio/mpeg">
+  </audio>
+  <script src="/js/emoji.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const socketform = document.querySelector("#socketform");
+    const typing = document.querySelector("#typing");
+    const seen = document.querySelector("#seen");
+    const notseen = document.querySelector("#notseen");
+    const own = document.querySelector("#own").innerText.trim();
+    const chatbox = document.querySelector(".chatbox");
+    const curremail = document.querySelector(".curremail");
+    const chatboxinps = document.querySelector(".chatboxinps");
+    const currentemail = document.querySelector(".currentemail").innerText.trim();
+    const currentrealemail = document.querySelector(".curremail").innerText.trim();
+    const chatname = document.querySelectorAll(".chatname");
+    const anchors = document.querySelectorAll(".list-group a");
+    const message_voice = document.getElementById("myAudio");
+    let Timeout = null;
+
+    chatboxinps.scrollTop = chatboxinps.scrollHeight;
+
+    socketform.addEventListener("submit", (a) => {
+      a.preventDefault();
+
+      if (!socketform.elements.email.value) return
+
+      socket.emit(
+        "send_message",
+        socketform.elements.email.value,
+        currentemail,
+        own
+      );
+      socketform.elements.email.value = "";
+      emojiElement.classList.remove('emojiflex')
+      seen.style.display = 'none'
+    });
+
+    socketform.elements.email.addEventListener("input", () => {
+      socket.emit("keyup", currentemail, own);
+    });
+
+    socket.emit("join", currentemail, own);
+
+    socket.on('haveuseen', (a, b) => {
+      if (currentemail != b) {
+        anchors.forEach(c => {
+          if (c.dataset._id == b) {
+            c.style.fontWeight = 'bold'
+          }
+        })
+      }else{
+        socket.emit('seened',a,b)
+      }
+    })
+
+    socket.on('youhaveseened', () => {
+      seen.style.display = 'inline-block'
+    })
+
+    socket.on("typing", (a) => {
+      clearTimeout(Timeout);
+      if (typing.style.display != " block") {
+        typing.style.display = "block";
+        Timeout = setTimeout(() => {
+          typing.style.display = "none";
+        }, 1000);
+        chatboxinps.scrollTop = chatboxinps.scrollHeight;
+      }
+    });
+
+    socket.on("voice", () => {
+      message_voice.currentTime = 0;
+      setTimeout(() => {
+        message_voice.play()
+      })
+    })
+
+
+    socket.on("message", (a, b, c) => {
+      if (b != own) socket.emit("seen", b, c);
+      let div = document.createElement("div");
+      let p = document.createElement("p");
+      p.classList.add(b == own ? "right" : "left");
+      p.innerHTML = a;
+      div.append(p);
+      chatboxinps.insertBefore(div, typing);
+      chatboxinps.scrollTop = chatboxinps.scrollHeight;
+    });
+  </script>

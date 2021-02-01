@@ -1,0 +1,88 @@
+  <div class="loading-container d-none">
+    <div class="loading"></div>
+    <h2>Loading ...</h2>
+  </div>
+  <input type="file" id="image" name="img" multiple />
+  <% if(ownuser.gallery)ownuser.gallery.forEach((a,b)=> { %>
+    <div class="imgdiv" id="<%= 'b' + b %>">
+      <button onclick="removedb(`<%= 'b' + b %>`)">X</button>
+      <img src="<%= '/images/upload/' + a %>" onclick="setProfile(this)"
+        class="<%= a == ownuser.image ? 'main uploaded' : 'uploaded' %>">
+    </div>
+    <% }) %>
+      <br>
+      <button id="imgupload">Save</button>
+<script src="/js/create-file-list.js"></script>
+<script>
+  let removed = []
+  let input = null
+  let loading = false
+  let main = $('.main')[0]
+
+  $("#imgupload").click(async function () {
+    if ($('.main')[0]) {
+      if ($('.main').parent()[0].id.includes('b')) {
+        await fetch('/setprofile', {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ id: $('.main')[0].src })
+        })
+      }
+    }
+    var data2 = new FormData()
+    if (input){
+    if ($('.main')[0]) {
+      if (!$('.main').parent()[0].id.includes('b')) {
+        data2.append('id', $('.main')[0].id)
+      }
+    }
+    Array.from(input.files).filter((a, b) => !removed.includes(b)).forEach(a => data2.append("img", a))
+    await await fetch("/upload", {
+      method: "POST",
+      body: data2,
+    })}
+    location.reload()
+  });
+
+  const setProfile = a => {
+    $(a).addClass("main").parent().siblings().find('img').removeClass("main");
+  };
+
+  const remove = a => {
+    $(`#${a}`).parent().remove()
+    removed.push(a)
+  }
+
+  const removedb = a => {
+    $('.loading-container').removeClass('d-none')
+    fetch("/deleteimg", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ id: $('#' + a).find('img')[0].src.split('/').slice(5).join('') })
+    }).then((res) => res.json()).then(b => { if (b.deleted) { $('#' + a).remove() }; $('.loading-container').addClass('d-none') })
+  }
+
+  $(document).ready(function () {
+    $("#image").change(function () {
+      removed = []
+      input = document.querySelector('input[type="file"]');
+      for (var i = 0; i < $(this)[0].files.length; i++) {
+        let div = document.createElement("div");
+        div.classList.add('imgdiv')
+        div.innerHTML = `<button onclick=remove(${i})>X</button>`
+        let img = document.createElement("img");
+        img.setAttribute("class", "uploaded");
+        img.setAttribute("id", i);
+        img.src = window.URL.createObjectURL(this.files[i]);
+        img.addEventListener("click", () => setProfile(img, i));
+        div.append(img)
+        $("br").before(div);
+      }
+    });
+  });
+
+</script>
