@@ -53,7 +53,7 @@ const notAuth = (req, res, next) => {
     }
 }
 
-mongoose.connect('mongodb+srv://shroudich:191136115@cluster0.rlupt.mongodb.net/node-auth', { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false })
+mongoose.connect('', { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false })
     .then(() => {
         http.listen(process.env.PORT || 3000)
 
